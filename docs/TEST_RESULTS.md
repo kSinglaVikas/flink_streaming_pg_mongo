@@ -16,26 +16,53 @@
 - Timestamps properly formatted (ISO 8601)
 - All data types preserved correctly
 
-## 🧪 Test Results
+## 🧪 Testing Approach
 
-### Test 1: Initial Data Sync ✅
-- **Users**: 7 documents synced
-- **Orders**: 5 orders embedded in user documents
-- User 1 has 3 orders embedded
-- User 2 has 1 order embedded
+The pipeline uses a simplified validation approach that focuses on verifying the core functionality:
 
-### Test 2: INSERT New Order ✅
-- Inserted: "Wireless Keyboard" for User 1
-- **Result**: Order automatically embedded in User 1 document
-- User 1 now has 4 orders embedded
-- Latency: ~3-5 seconds
+### Validation Script: `test-embedding.sh`
 
-### Test 3: UPDATE User Information ✅
-- Updated User 1: city → "Seattle", age → 32
-- **Result**: User info updated, all 4 orders still embedded
-- No data loss during user updates
+The test script validates:
+1. **User Count Match**: PostgreSQL user count equals MongoDB user count
+2. **Embedded Order Count**: PostgreSQL order count equals MongoDB embedded order count
+3. **Job Health**: Flink job is running without errors
 
-### Test 4: Document Structure ✅
+### Load Generation: `generate-load.sh`
+
+Generate realistic test data:
+```bash
+./scripts/generate-load.sh <users> <orders_per_user>
+```
+
+Example:
+```bash
+./scripts/generate-load.sh 50 5  # Creates 50 users with 5 orders each
+```
+
+**Note**: The load generator only creates orders for newly created users (not all existing users), ensuring predictable test data.
+
+### Verification Workflow
+
+1. Generate test data:
+   ```bash
+   ./scripts/generate-load.sh 10 4
+   ```
+
+2. Wait for CDC processing (a few seconds)
+
+3. Run validation:
+   ```bash
+   ./scripts/test-embedding.sh
+   ```
+
+### Expected Results ✅
+
+- User counts match between PostgreSQL and MongoDB
+- Embedded order counts match (e.g., 10 users × 4 orders = 40 orders)
+- Flink job status: RUNNING
+- Processing latency: 2-5 seconds
+
+### Test 1: Document Structure ✅
 ```javascript
 {
   _id: 1,

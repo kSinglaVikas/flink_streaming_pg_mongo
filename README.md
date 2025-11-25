@@ -105,22 +105,33 @@ MongoDB (Denormalized documents)
 
 ## 🧪 Testing
 
-Quick test to verify embedding:
+Run the embedding test suite:
 ```bash
-# Run automated tests
 ./scripts/test-embedding.sh
-
-# Or manually test
-docker exec postgres-source psql -U postgres -d sourcedb -c \
-  "INSERT INTO orders (user_id, product_name, quantity, price) VALUES (1, 'Mouse', 1, 29.99);"
-
-# Wait 5 seconds and check MongoDB
-sleep 5
-docker exec mongodb-target mongosh -u admin -p admin123 --authenticationDatabase admin \
-  --eval "use targetdb" --eval "db.users.findOne({_id: 1})"
 ```
 
-See [docs/TESTING.md](docs/TESTING.md) for comprehensive test scenarios.
+This runs **12 test scenarios** covering:
+- Data consistency & initial snapshot
+- CDC operations (INSERT, UPDATE)
+- Document embedding & referential integrity
+- Data type handling (decimals, timestamps)
+- Bulk operations & performance
+- System health checks
+
+### Load Testing
+
+Generate realistic load to test at scale:
+```bash
+# Generate 50 users with 5 orders each (default)
+./scripts/generate-load.sh
+
+# Custom load: 100 users with 10 orders each
+./scripts/generate-load.sh 100 10
+```
+
+The load generator creates realistic test data with random names, emails, cities, products, and validates CDC latency and embedding accuracy.
+
+See [docs/TESTING.md](docs/TESTING.md) for detailed test scenarios and expected results.
 
 ## ⚙️ Configuration
 
@@ -186,6 +197,22 @@ docker logs -f mongodb-target
 
 ## 🔧 Troubleshooting
 
+### Reset and Restart
+
+If CDC stops working or data isn't syncing properly:
+```bash
+./scripts/reset-and-restart.sh
+```
+
+This script will:
+1. Cancel running Flink jobs
+2. Stop all containers
+3. Clean Flink state and checkpoints
+4. Clean PostgreSQL replication slots
+5. Restart all services with clean state
+6. Submit fresh Flink job
+7. Verify sync is working
+
 ### Common Issues
 
 **Data not syncing?**
@@ -241,12 +268,6 @@ User document with embedded orders:
 }
 ```
 
-## 🔄 Performance
-
-- **CDC Latency**: 2-5 seconds
-- **Throughput**: Handles 1000+ records/sec
-- **Checkpoint Interval**: 5 seconds
-- **Exactly-Once**: ✅ Guaranteed
 
 ## 🧹 Cleanup
 
